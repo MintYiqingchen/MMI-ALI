@@ -1,0 +1,16 @@
+import eval.classifier_metrics_impl as classifier_metrics
+import eval.eval_utils as eval_utils
+
+def _build_metrics(self, real, fake, prefix = 'gan_metrics'):
+    with tf.name_scope(prefix, 'gan_metrics', [real, fake]) as scope:
+        real = classifier_metrics.preprocess_image(real)
+        fake = classifier_metrics.preprocess_image(fake)
+        real_fake = tf.concat((real, fake), axis = 0)
+        logits, acti = classifier_metrics.run_inception(real_fake, output_tensor = ['logits:0','pool_3:0'])
+        real_logits, fake_logits = tf.split(logits, 2, axis=0)
+        real_acti, fake_acti = tf.split(acti, 2, axis = 0)
+        fid = classifier_metrics.frechet_classifier_distance_from_activations(real_acti, fake_acti)
+        incep_score = classifier_metrics.classifier_score_from_logits(fake_logits)
+        kid = classifier_metrics.kernel_classifier_distance_from_activations(real_acti, fake_acti)
+        res = {prefix + '_fid': fid, prefix + '_kid': kid}
+    return res
